@@ -1,5 +1,6 @@
 package com.minesweep.jogos
 
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 
 
@@ -24,6 +25,12 @@ class Minesweeper (var dificuldade :  Int) {
             COMECO
         }
 
+        // Fazer lista das direcoes de cada casa
+        val direcoes = listOf(
+            -1 to -1, -1 to 0, -1 to 1,
+            0 to -1,          0 to 1,
+            1 to -1,  1 to 0, 1 to 1
+        )
     }
 
     // Setters e getters
@@ -81,13 +88,6 @@ class Minesweeper (var dificuldade :  Int) {
         }
 
 
-        // Fazer lista das direcoes de cada bomba
-        val direcoes = listOf(
-            -1 to -1, -1 to 0, -1 to 1,
-            0 to -1,          0 to 1,
-            1 to -1,  1 to 0, 1 to 1
-        )
-
         // Iterar pel
         for ((linhas, colunas) in listaBombas) {
             // Iterar pelas direcoes
@@ -118,16 +118,40 @@ class Minesweeper (var dificuldade :  Int) {
         listaDescoberto.clear()
     }
 
-    fun descobrir(){
+    // TODO: return type de jeito, ANY não é o melhor
 
+    // Descobre o quadrado selecionado, devolve um estado jogo caso perdeu (clicou
+    // em bomba) ou a grelha de descobertos
+    fun descobrir(linha: Int, coluna: Int) : Any{
+        // Casos para prevenir erros (out of bounds ou
+        if (linha !in 0..<tamanhoGrelha || coluna !in 0..<tamanhoGrelha) {
+            println("Coordenadas a descobrir estão incorretas!")
+            return -1
+        }
+        // Já descoberto, devolve 0
+        if (listaDescoberto[linha][coluna]) return listaDescoberto
+        // Atualiza a lista
+        listaDescoberto[linha][coluna] = true
+
+        // Caso base (não é uma quadrado vazio)
+        if (grelha[linha][coluna] == -1){ // Tem bomba, perde
+            return EstadoJogo.PERDEU
+        } else if (grelha[linha][coluna] > 0){ // Não é livre, devolve
+            return listaDescoberto
+        }
+
+        // Caso recursivo (é um quadrado vazio, itera pelos 8 quadrados à volta)
+        for ((offsetLinha, offsetColuna) in direcoes) {
+            descobrir(linha + offsetLinha, coluna + offsetColuna)
+        }
+        return listaDescoberto
     }
 
     // Vai sinalizar ou tirar sinalizador (importante para verificar se
     // ou não)
-    fun sinalizar (coordenadas : Pair<Int,Int>){
-        listaSinalizado[coordenadas.first][coordenadas.second] = !listaSinalizado[coordenadas.first][coordenadas.second]
+    fun sinalizar (linha : Int, coluna : Int){
+        listaSinalizado[linha][coluna] = !listaSinalizado[linha][coluna]
     }
-
 }
 
 fun main(){
