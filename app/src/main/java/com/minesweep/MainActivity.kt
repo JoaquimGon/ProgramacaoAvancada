@@ -26,9 +26,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MinesweepTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 
-                }
             }
         }
     }
@@ -44,6 +42,3 @@ fun Grelha() {
         }
     }
 }
-
-
-
