@@ -93,7 +93,7 @@ class Minesweeper (var dificuldade :  Int) {
             // Iterar pelas direcoes
             for ((y, x) in direcoes) {
                 // Calcular coordenadas novas
-                val verficarY = linhas + y
+            val verficarY = linhas + y
                 val verficarX = colunas + x
                 if (verficarY in 0 until tamanhoGrelha && verficarX in 0 until tamanhoGrelha &&
                     grelha[verficarY][verficarX].value != -1
@@ -110,7 +110,6 @@ class Minesweeper (var dificuldade :  Int) {
         }
     }
 
-
     // Descobre o quadrado selecionado, devolve um estado jogo caso perdeu (clicou
     // em bomba) ou a grelha de descobertos
     fun descobrir(linha: Int, coluna: Int){
@@ -123,9 +122,8 @@ class Minesweeper (var dificuldade :  Int) {
         if (listaDescoberto[linha][coluna].value) return
         // Atualiza a lista
         listaDescoberto[linha][coluna].value = true
+
         numDescobertos++
-
-
 
         //Verificar se ganhou
         var numSinalizados = 0
