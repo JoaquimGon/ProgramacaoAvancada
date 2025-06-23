@@ -8,24 +8,27 @@ import androidx.compose.runtime.toMutableStateList
 
 
 class Minesweeper (var dificuldade :  Int) {
-    var estado = EstadoJogo.COMECO // Inicio de estado a começo
+    var estado = mutableStateOf(EstadoJogo.JOGAR) // Inicio de estado a começo
     val tamanhoGrelha get() = grelhas[dificuldade]!!
     val bombas get() = numBombas[dificuldade]!!
     val grelha = mutableListOf<MutableList<MutableState<Int>>>() // Grelha do jogo (números e bombas)
     val listaDescoberto = mutableListOf<MutableList<MutableState<Boolean>>>() // Quadrados descobertos
     val listaSinalizado = mutableListOf<MutableList<MutableState<Boolean>>>() // Quadrados sinalizados
+    // Contar quadrados sinalizados e descobertos para ver se ganhou
+    var numDescobertos = 0
+    // Lista para randomizar as coordenadas para as bombas
+    var coordsBombas = mutableListOf<Pair<Int, Int>>()
 
     // Estático para acessar sem objeto
     companion object {
         // Configuracoes dependendo da dificuldade
         val grelhas: Map<Int, Int> = mapOf(0 to 9, 1 to 12, 2 to 12)
-        val numBombas: Map<Int, Int> = mapOf(0 to 15, 1 to 30, 2 to 72)
+        val numBombas: Map<Int, Int> = mapOf(0 to 15, 1 to 30, 2 to 50)
 
         enum class EstadoJogo {
             GANHOU,
             PERDEU,
-            PROXIMO,
-            COMECO
+            JOGAR
         }
 
         // Fazer lista das direcoes de cada casa
@@ -38,10 +41,10 @@ class Minesweeper (var dificuldade :  Int) {
 
     // Setters e getters
     fun setEstadoJogo(estado : EstadoJogo) {
-        this.estado = estado
+        this.estado.value = estado
     }
     fun getEstadoJogo() : EstadoJogo {
-        return estado
+        return estado.value
     }
 
     fun mudarDificuldade(dificuldade : Int) {
@@ -55,6 +58,7 @@ class Minesweeper (var dificuldade :  Int) {
     fun criarGrelhas(){
         // Limpa e criar grelhas novas
         limparJogo()
+        setEstadoJogo(EstadoJogo.JOGAR)
 
         for (linhas in 0 until tamanhoGrelha) {
             listaDescoberto.add(MutableList(tamanhoGrelha) { mutableStateOf(false) })
@@ -64,22 +68,22 @@ class Minesweeper (var dificuldade :  Int) {
 
         // Lista para meter as coordenadas das bombas
         var listaBombas = mutableListOf<Pair<Int, Int>>()
-        // Lista para randomizar as coordenadas para as bombas
-        var coordsAleatorias = mutableListOf<Pair<Int, Int>>()
 
+        coordsBombas.clear()
         // Buscar coordenadas aleatorios
         for (x in 0 until tamanhoGrelha) {
             for (y in 0 until tamanhoGrelha) {
-                coordsAleatorias.add(Pair(x, y))
+                coordsBombas.add(Pair(x, y))
             }
         }
 
         // Randomizar coordendas
-        coordsAleatorias.shuffle()
+        coordsBombas.shuffle()
 
         // Meter bombas partindo das coords aleatorias, guarda a posicao das bombas
+
         for(coordenada in 0..bombas-1){
-            var (x, y) = coordsAleatorias[coordenada]
+            var (x, y) = coordsBombas[coordenada]
             listaBombas.add(Pair(x,y))
             grelha[x][y].value = -1
         }
@@ -119,6 +123,25 @@ class Minesweeper (var dificuldade :  Int) {
         if (listaDescoberto[linha][coluna].value) return
         // Atualiza a lista
         listaDescoberto[linha][coluna].value = true
+        numDescobertos++
+
+
+
+        //Verificar se ganhou
+        var numSinalizados = 0
+        for(bomba in coordsBombas){
+            // Se bomba tiver sinalizada corretamente adicionar à contagem
+            if(listaSinalizado[bomba.first][bomba.second].value) {
+                numSinalizados++
+            }
+        }
+        if(
+            numSinalizados == numBombas[dificuldade] &&
+            numDescobertos == tamanhoGrelha*tamanhoGrelha - numBombas[dificuldade]!!
+        ){
+            setEstadoJogo(EstadoJogo.GANHOU)
+        }
+
 
         // Caso base (não é um quadrado vazio)
         if (grelha[linha][coluna].value == -1) {
@@ -150,6 +173,8 @@ class Minesweeper (var dificuldade :  Int) {
             }
         }
     }
+
+
 
 
 
