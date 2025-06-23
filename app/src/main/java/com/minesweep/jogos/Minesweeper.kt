@@ -1,22 +1,25 @@
 package com.minesweep.jogos
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 
 
 class Minesweeper (var dificuldade :  Int) {
     var estado = EstadoJogo.COMECO // Inicio de estado a começo
-    val tamanhoGrelha = grelhas[dificuldade]!! // Tamanho da grelha
-    val bombas = numBombas[dificuldade]!! // Numero de bombas
-    val grelha = mutableListOf<MutableList<Int>>() // Grelha do jogo (números e bombas)
-    val listaDescoberto = mutableListOf<MutableList<Boolean>>() // Quadrados descobertos
-    val listaSinalizado = mutableListOf<MutableList<Boolean>>() // Quadrados sinalizados
+    val tamanhoGrelha get() = grelhas[dificuldade]!!
+    val bombas get() = numBombas[dificuldade]!!
+    val grelha = mutableListOf<MutableList<MutableState<Int>>>() // Grelha do jogo (números e bombas)
+    val listaDescoberto = mutableListOf<MutableList<MutableState<Boolean>>>() // Quadrados descobertos
+    val listaSinalizado = mutableListOf<MutableList<MutableState<Boolean>>>() // Quadrados sinalizados
 
     // Estático para acessar sem objeto
     companion object {
         // Configuracoes dependendo da dificuldade
-        val grelhas: Map<Int, Int> = mapOf(0 to 9, 1 to 16, 2 to 16)
-        val numBombas: Map<Int, Int> = mapOf(0 to 15, 1 to 40, 2 to 128)
+        val grelhas: Map<Int, Int> = mapOf(0 to 9, 1 to 12, 2 to 12)
+        val numBombas: Map<Int, Int> = mapOf(0 to 15, 1 to 30, 2 to 72)
 
         enum class EstadoJogo {
             GANHOU,
@@ -40,29 +43,23 @@ class Minesweeper (var dificuldade :  Int) {
     fun getEstadoJogo() : EstadoJogo {
         return estado
     }
-    fun setDificuldade(dificuldade : Int) {
+
+    fun mudarDificuldade(dificuldade : Int) {
         this.dificuldade = dificuldade
-        // Atualizar grelhas
+        limparJogo()
         criarGrelhas()
-    }
-    fun getDificuldade() : Int {
-        return dificuldade
     }
 
     // Cria e preenche a grelha com bombas
     // Tamanho e número de bombas depende da dificuldade
-    fun criarGrelhas(): List<MutableList<Int>> {
-        // Cria a grelha
-        for(linhas in 0..<tamanhoGrelha){
-            grelha.add(MutableList(tamanhoGrelha) { 0 }.toMutableStateList())
-        }
-        // Criar lista de quadrados descobertos
-        for(linhas in 0..<tamanhoGrelha){
-            listaDescoberto.add(MutableList(tamanhoGrelha) { false }.toMutableStateList())
-        }
-        // Criar lista de quadrados descobertos
-        for(linhas in 0..<tamanhoGrelha){
-            listaDescoberto.add(MutableList(tamanhoGrelha) { false }.toMutableStateList())
+    fun criarGrelhas(){
+        // Limpa e criar grelhas novas
+        limparJogo()
+
+        for (linhas in 0 until tamanhoGrelha) {
+            listaDescoberto.add(MutableList(tamanhoGrelha) { mutableStateOf(false) })
+            listaSinalizado.add(MutableList(tamanhoGrelha) { mutableStateOf(false) })
+            grelha.add(MutableList(tamanhoGrelha) { mutableIntStateOf(0) })
         }
 
         // Lista para meter as coordenadas das bombas
@@ -84,11 +81,10 @@ class Minesweeper (var dificuldade :  Int) {
         for(coordenada in 0..bombas-1){
             var (x, y) = coordsAleatorias[coordenada]
             listaBombas.add(Pair(x,y))
-            grelha[x][y] = -1
+            grelha[x][y].value = -1
         }
 
-
-        // Iterar pel
+        // Iterar pelas direcoes
         for ((linhas, colunas) in listaBombas) {
             // Iterar pelas direcoes
             for ((y, x) in direcoes) {
@@ -96,84 +92,74 @@ class Minesweeper (var dificuldade :  Int) {
                 val verficarY = linhas + y
                 val verficarX = colunas + x
                 if (verficarY in 0 until tamanhoGrelha && verficarX in 0 until tamanhoGrelha &&
-                    grelha[verficarY][verficarX] != -1
+                    grelha[verficarY][verficarX].value != -1
                 ) {
-                    grelha[verficarY][verficarX] += 1
+                    grelha[verficarY][verficarX].value += 1
                 }
             }
         }
 
         for(linha in 0..<tamanhoGrelha){
             for(coluna in 0..<tamanhoGrelha)
-                print("[${grelha[linha][coluna]}]")
+                print("[${grelha[linha][coluna].value}]")
             println()
         }
-
-        return grelha
     }
 
-    fun limparJogo(){
-        grelha.clear()
-        listaSinalizado.clear()
-        listaDescoberto.clear()
-    }
-
-    // TODO: return type de jeito, ANY não é o melhor
 
     // Descobre o quadrado selecionado, devolve um estado jogo caso perdeu (clicou
     // em bomba) ou a grelha de descobertos
-    fun descobrir(linha: Int, coluna: Int) : Any{
+    fun descobrir(linha: Int, coluna: Int){
         // Casos para prevenir erros (out of bounds ou
         if (linha !in 0..<tamanhoGrelha || coluna !in 0..<tamanhoGrelha) {
             println("Coordenadas a descobrir estão incorretas!")
-            return -1
+            return
         }
-        // Já descoberto, devolve 0
-        if (listaDescoberto[linha][coluna]) return listaDescoberto
+        // Já descoberto, devolve lista inalterada
+        if (listaDescoberto[linha][coluna].value) return
         // Atualiza a lista
-        listaDescoberto[linha][coluna] = true
+        listaDescoberto[linha][coluna].value = true
 
-        // Caso base (não é uma quadrado vazio)
-        if (grelha[linha][coluna] == -1){ // Tem bomba, perde
-            return EstadoJogo.PERDEU
-        } else if (grelha[linha][coluna] > 0){ // Não é livre, devolve
-            return listaDescoberto
+        // Caso base (não é um quadrado vazio)
+        if (grelha[linha][coluna].value == -1) {
+            setEstadoJogo(EstadoJogo.PERDEU)
+            abrirMapa()
+            return
+        } else if (grelha[linha][coluna].value > 0) {
+            return
         }
+
 
         // Caso recursivo (é um quadrado vazio, itera pelos 8 quadrados à volta)
         for ((offsetLinha, offsetColuna) in direcoes) {
             descobrir(linha + offsetLinha, coluna + offsetColuna)
         }
-        return listaDescoberto
     }
+
+    fun limparJogo(){
+        grelha.clear()
+        listaDescoberto.clear()
+        listaSinalizado.clear()
+    }
+
+
+    fun abrirMapa(){
+        for(linha in 0..<tamanhoGrelha){
+            for(coluna in 0..<tamanhoGrelha){
+                listaDescoberto[linha][coluna].value = true
+            }
+        }
+    }
+
+
 
     // Vai sinalizar ou tirar sinalizador (importante para verificar se
     // ou não)
     fun sinalizar (linha : Int, coluna : Int){
-        listaSinalizado[linha][coluna] = !listaSinalizado[linha][coluna]
+        // Apenas os não desobertos
+        if (!listaDescoberto[linha][coluna].value){
+            listaSinalizado[linha][coluna].value = !listaSinalizado[linha][coluna].value
+        }
     }
 }
-
-fun main(){
-    var jogo = Minesweeper(1)
-    jogo.criarGrelhas()
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
